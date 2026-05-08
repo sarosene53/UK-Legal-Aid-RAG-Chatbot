@@ -70,7 +70,6 @@ export default function ChatWindow() {
 
   const getSourcesForMessage = (messageIndex: number): Citation[] => {
     // Messages alternate: user, assistant, user, assistant...
-    // We want the assistant message (even indices after first user)
     if (messages[messageIndex]?.role !== 'assistant') {
       return []
     }
@@ -80,7 +79,7 @@ export default function ChatWindow() {
   }
 
   return (
-    <div className="bg-white/80 backdrop-blur-xl rounded-3xl border border-slate-200/60 flex flex-col h-[650px] overflow-hidden shadow-2xl shadow-custom-navy/10 ring-1 ring-slate-900/5">
+    <div className="bg-white/80 backdrop-blur-xl rounded-3xl border border-slate-200/60 flex flex-col h-[750px] overflow-hidden shadow-2xl shadow-custom-navy/10 ring-1 ring-slate-900/5">
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-6 md:p-8 space-y-6 scroll-smooth">
         <AnimatePresence initial={false}>
