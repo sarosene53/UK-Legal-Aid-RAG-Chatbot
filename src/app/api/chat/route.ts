@@ -51,6 +51,27 @@ export async function POST(req: NextRequest) {
     // RAG pipeline
     const queryEmbedding = await embedQuery(userMessage)
     const chunks = await retrieveChunks(queryEmbedding)
+    
+    // Check if we have any chunks at all
+    if (chunks.length === 0) {
+      logQuery({
+        ip,
+        query: userMessage,
+        inScope: true,
+        classification: classification.classification,
+        sourceCount: 0,
+        warning: 'No relevant sources found for query'
+      })
+      
+      return new Response(
+        JSON.stringify({ 
+          error: true, 
+          message: 'I cannot provide an answer as there are no verified official sources covering this topic.'
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+    
     const promptResult = buildPrompt(chunks)
     const { metadata } = getPromptWithMetadata()
 
@@ -59,6 +80,8 @@ export async function POST(req: NextRequest) {
     if (validChunks.length === 0) {
       validChunks = chunks // Use stale sources if no fresh ones
     }
+    
+    // Create citations with all available metadata
     const citations = validChunks.map((c) => ({
       id: c.id,
       source_title: c.source_title,
@@ -75,6 +98,7 @@ export async function POST(req: NextRequest) {
       classification: classification.classification,
       promptMetadata: metadata,
       sourceCount: validChunks.length,
+      sourceQuality: validChunks.length < chunks.length ? 'stale_sources_used' : 'fresh_sources',
     })
 
     // Stream response with safety validation

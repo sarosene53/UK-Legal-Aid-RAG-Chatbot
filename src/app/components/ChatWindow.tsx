@@ -6,14 +6,39 @@ import MessageBubble from './MessageBubble'
 import { Send, Scale, AlertTriangle, ArrowRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
+export interface Citation {
+  id: string
+  source_title: string
+  source_url: string
+  publication_date: string
+  similarity: number
+}
+
 export default function ChatWindow() {
   const [outOfScope, setOutOfScope] = useState<string | null>(null)
+  const [messageSources, setMessageSources] = useState<Map<string, Citation[]>>(new Map())
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
     api: '/api/chat',
     onResponse: (response) => {
       console.log('API Response received:', response);
+      
+      // Extract source citations from header (primary source of truth)
+      const citationsHeader = response.headers.get('X-Source-Citations')
+      if (citationsHeader) {
+        try {
+          const citations: Citation[] = JSON.parse(citationsHeader)
+          console.log('Citations extracted from header:', citations);
+          // Store citations indexed by the next assistant message that will be added
+          // We'll match it after the message is received
+          const currentMessageCount = messages.length
+          setMessageSources(prev => new Map(prev).set(`msg_${currentMessageCount}`, citations))
+        } catch (e) {
+          console.error('Failed to parse citations header:', e)
+        }
+      }
+      
       // Handle out-of-scope / error JSON responses
       const contentType = response.headers.get('content-type') ?? ''
       console.log('Content type:', contentType);
@@ -43,6 +68,17 @@ export default function ChatWindow() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, outOfScope])
 
+  const getSourcesForMessage = (messageIndex: number): Citation[] => {
+    // Messages alternate: user, assistant, user, assistant...
+    // We want the assistant message (even indices after first user)
+    if (messages[messageIndex]?.role !== 'assistant') {
+      return []
+    }
+    
+    // Try to get sources - they're stored with the approximate message position
+    return messageSources.get(`msg_${messageIndex}`) || []
+  }
+
   return (
     <div className="bg-white/80 backdrop-blur-xl rounded-3xl border border-slate-200/60 flex flex-col h-[650px] overflow-hidden shadow-2xl shadow-custom-navy/10 ring-1 ring-slate-900/5">
       {/* Messages */}
@@ -66,8 +102,12 @@ export default function ChatWindow() {
             </motion.div>
           )}
 
-          {messages.map((m) => (
-            <MessageBubble key={m.id} message={m} />
+          {messages.map((m, idx) => (
+            <MessageBubble 
+              key={m.id} 
+              message={m} 
+              serverCitations={getSourcesForMessage(idx)}
+            />
           ))}
 
           {isLoading && messages.length > 0 && messages[messages.length - 1].role === 'user' && (

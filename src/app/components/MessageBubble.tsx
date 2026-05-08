@@ -3,7 +3,16 @@ import SourceBadge from './SourceBadge'
 import { motion } from 'framer-motion'
 import { CheckCircle2 } from 'lucide-react'
 
+export interface ServerCitation {
+  id: string
+  source_title: string
+  source_url: string
+  publication_date: string
+  similarity: number
+}
+
 // Parses [[Source: title | url]] or standard markdown list links * [Title] (URL) inject by LLM
+// This is now a FALLBACK - server citations are primary source of truth
 function parseSourcesFromContent(content: string) {
   const sourceRegex = /\[\[Source:\s*([^|]+)\|([^\]]+)\]\]|^\s*\*\s*\[([^\]]+)\]\s*\(([^)]+)\)/gm
   const sources: { title: string; url: string }[] = []
@@ -36,9 +45,47 @@ function parseSourcesFromContent(content: string) {
   return { cleanContent, sources }
 }
 
-export default function MessageBubble({ message }: { message: Message }) {
+export default function MessageBubble({ 
+  message, 
+  serverCitations = []
+}: { 
+  message: Message
+  serverCitations?: ServerCitation[]
+}) {
   const isUser = message.role === 'user'
-  const { cleanContent, sources } = parseSourcesFromContent(message.content)
+  const { cleanContent, sources: parsedSources } = parseSourcesFromContent(message.content)
+
+  // Use server citations as primary source of truth
+  // Only fall back to parsed sources if no server citations available
+  const finalSources = serverCitations.length > 0 
+    ? serverCitations.map(c => ({
+        title: c.source_title,
+        url: c.source_url,
+        similarity: c.similarity,
+        isVerified: true,
+        publicationDate: c.publication_date
+      }))
+    : parsedSources.map(s => ({
+        title: s.title,
+        url: s.url,
+        isVerified: false, // Parsed from LLM output, not verified
+        similarity: 0
+      }))
+
+  // Check if parsed sources match any server citations (validation)
+  const validatedSources = finalSources.map(source => {
+    if (!source.isVerified && serverCitations.length > 0) {
+      // If we have server citations but this source was parsed, check if it matches
+      const matched = serverCitations.find(sc => 
+        sc.source_url === source.url || 
+        sc.source_title.toLowerCase() === source.title.toLowerCase()
+      )
+      if (matched) {
+        source.isVerified = true
+      }
+    }
+    return source
+  })
 
   return (
     <motion.div 
@@ -73,14 +120,37 @@ export default function MessageBubble({ message }: { message: Message }) {
         </div>
 
         {/* Sources below AI messages */}
-        {sources.length > 0 && !isUser && (
-          <div className="flex flex-col gap-1.5 mt-1 ml-1 w-full">
-            <span className="text-[11px] font-medium text-slate-400 uppercase tracking-widest pl-1 mt-1">Sources</span>
+        {validatedSources.length > 0 && !isUser && (
+          <div className="flex flex-col gap-2 mt-2 ml-1 w-full">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-medium text-slate-400 uppercase tracking-widest">
+                {serverCitations.length > 0 ? '✓ Verified Sources' : 'Sources (from response)'}
+              </span>
+              {serverCitations.length === 0 && (
+                <span className="text-[10px] px-1.5 py-0.5 bg-custom-amber/20 text-custom-orange rounded font-semibold">
+                  Parsed
+                </span>
+              )}
+            </div>
             <div className="flex flex-wrap gap-2">
-              {sources.map((s, i) => (
-                <SourceBadge key={i} title={s.title} url={s.url} />
+              {validatedSources.map((s, i) => (
+                <SourceBadge 
+                  key={i} 
+                  title={s.title} 
+                  url={s.url}
+                  isVerified={s.isVerified}
+                  similarity={s.similarity}
+                  publicationDate={s.publicationDate}
+                />
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Show warning if no sources available */}
+        {finalSources.length === 0 && !isUser && serverCitations.length === 0 && parsedSources.length === 0 && (
+          <div className="text-[12px] text-custom-orange mt-2 ml-1 bg-custom-amber/20 px-3 py-1.5 rounded">
+            ⚠️ No sources available for this response
           </div>
         )}
       </div>
