@@ -11,8 +11,7 @@ export interface ServerCitation {
   similarity: number
 }
 
-// Parses [[Source: title | url]] or standard markdown list links * [Title] (URL) inject by LLM
-// This is now a FALLBACK - server citations are primary source of truth
+// Parses [[Source: title | url]] or standard markdown list links * [Title] (URL) inject by LLM, server citations are primary source of truth
 function parseSourcesFromContent(content: string) {
   const sourceRegex = /\[\[Source:\s*([^|]+)\|([^\]]+)\]\]|^\s*\*\s*\[([^\]]+)\]\s*\(([^)]+)\)/gm
   const sources: { title: string; url: string }[] = []
@@ -27,19 +26,14 @@ function parseSourcesFromContent(content: string) {
     }
     return ''
   })
-  
-  // Optionally remove the dangling "Sources:" or "**Sources:**" text 
-  // if the list was successfully replaced out of the prose paragraph
+ 
   if (sources.length === 0) {
-    // If no sources were found, the LLM might have output "Sources: <fallback message>"
-    // Strip "Sources:" out entirely so the user just sees the fallback message
+
     cleanContent = cleanContent.replace(/\*?\*?Sources:\*?\*?\s*/ig, '').trim()
   } else {
-    // Otherwise just remove it if it's dangling at the end
     cleanContent = cleanContent.replace(/\*?\*?Sources:\*?\*?\s*$/i, '').trim()
   }
 
-  // Remove markdown bold markers from the assistant text (e.g. **section titles**)
   cleanContent = cleanContent.replace(/\*\*(.+?)\*\*/g, '$1')
 
   return { cleanContent, sources }
@@ -69,7 +63,8 @@ export default function MessageBubble({
         title: s.title,
         url: s.url,
         isVerified: false, // Parsed from LLM output, not verified
-        similarity: 0
+        similarity: 0,
+        publicationDate: undefined
       }))
 
   // Check if parsed sources match any server citations (validation)

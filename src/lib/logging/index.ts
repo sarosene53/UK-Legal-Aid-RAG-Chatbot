@@ -17,10 +17,11 @@ export interface QueryLog {
   responseLength?: number
   totalTokensEstimate?: number
   error?: string
+  warning?: string
+  sourceQuality?: string
 }
 
-// In production, this would write to a logging service (e.g., Supabase, DataDog, etc.)
-// For now, we'll provide a structured logging interface
+
 export function logQuery(params: {
   ip: string
   query: string
@@ -31,6 +32,8 @@ export function logQuery(params: {
   sourceCount: number
   responseLength?: number
   error?: string
+  warning?: string
+  sourceQuality?: string
 }): QueryLog {
   const log: QueryLog = {
     timestamp: new Date().toISOString(),
@@ -44,20 +47,19 @@ export function logQuery(params: {
     sourceCount: params.sourceCount,
     responseLength: params.responseLength,
     error: params.error,
+    warning: params.warning,
+    sourceQuality: params.sourceQuality,
   }
 
-  // Log to console in development
   if (typeof process !== 'undefined' && process.env.NODE_ENV === 'development') {
     console.log('[QUERY_LOG]', JSON.stringify(log, null, 2))
   }
 
-  // TODO: Send to logging service (Supabase, DataDog, etc.)
-  // await supabase.from('query_logs').insert([log])
 
   return log
 }
 
-// For audit trails - log all prompt generations
+
 export function logPromptGeneration(params: {
   promptVersion: string
   sourceCount: number
@@ -74,5 +76,4 @@ export function logPromptGeneration(params: {
     console.log('[AUDIT_LOG]', JSON.stringify(log, null, 2))
   }
 
-  // TODO: Send to audit log
 }

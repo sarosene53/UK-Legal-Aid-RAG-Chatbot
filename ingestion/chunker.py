@@ -1,10 +1,3 @@
-"""
-chunker.py — Simple word-based text chunker with overlap.
-
-For production, replace with a token-aware chunker using tiktoken.
-"""
-
-
 def chunk_text(text: str, chunk_size: int = 512, overlap: int = 50) -> list[str]:
     """
     Split text into overlapping chunks by approximate word count.
