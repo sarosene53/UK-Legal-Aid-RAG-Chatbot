@@ -19,7 +19,9 @@ from sources import SOURCES
 from chunker import chunk_text
 
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
-SUPABASE_URL = os.environ["NEXT_PUBLIC_SUPABASE_URL"]
+SUPABASE_URL = os.environ.get("SUPABASE_URL") or os.environ.get("NEXT_PUBLIC_SUPABASE_URL")
+if not SUPABASE_URL:
+    raise RuntimeError("Missing SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL environment variable")
 SUPABASE_SERVICE_ROLE_KEY = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
 EMBEDDING_MODEL = "text-embedding-3-small"
 CHUNK_SIZE = 512      # tokens (approximate via word count)
