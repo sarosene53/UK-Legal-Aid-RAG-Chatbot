@@ -63,8 +63,7 @@ export default function MessageBubble({
         title: s.title,
         url: s.url,
         isVerified: false, // Parsed from LLM output, not verified
-        similarity: 0,
-        publicationDate: undefined
+        similarity: 0
       }))
 
   // Check if parsed sources match any server citations (validation)

@@ -17,8 +17,6 @@ export interface QueryLog {
   responseLength?: number
   totalTokensEstimate?: number
   error?: string
-  warning?: string
-  sourceQuality?: string
 }
 
 
@@ -32,8 +30,6 @@ export function logQuery(params: {
   sourceCount: number
   responseLength?: number
   error?: string
-  warning?: string
-  sourceQuality?: string
 }): QueryLog {
   const log: QueryLog = {
     timestamp: new Date().toISOString(),
@@ -47,8 +43,6 @@ export function logQuery(params: {
     sourceCount: params.sourceCount,
     responseLength: params.responseLength,
     error: params.error,
-    warning: params.warning,
-    sourceQuality: params.sourceQuality,
   }
 
   if (typeof process !== 'undefined' && process.env.NODE_ENV === 'development') {
